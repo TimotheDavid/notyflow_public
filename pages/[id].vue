@@ -95,7 +95,6 @@ async function fetchInfoNotification() {
         router.back();
     }
 
-    console.log(content);
 }
 
 
