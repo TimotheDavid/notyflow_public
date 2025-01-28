@@ -3,7 +3,7 @@
 
         <div class="w-2/3 mx-auto pt-10">
             <div class="mx-auto">
-                <img :src="data.logo" class=" h-20 w-20 m-auto my-2 rounded-full" alt="logo"/>                
+                <img :src="data.logo" class=" h-20 m-auto my-2 rounded-full" alt="logo"/>                
                 <h1 class="font-semibold text-center text-3xl uppercase text-white">{{ data.name }} </h1>
             </div>
             <div class="flex justify-between w-2/3 mx-auto my-3">
