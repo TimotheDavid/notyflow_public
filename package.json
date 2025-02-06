@@ -5,6 +5,8 @@
   "scripts": {
     "build": "nuxt build",
     "dev": "nuxt dev --https --ssl-key localhost-key.pem --ssl-cert localhost.pem",
+    "dev:http": "nuxt dev",
+    "dev:host": " nuxt dev --https --ssl-key localhost-key.pem --ssl-cert localhost.pem --host",
     "generate": "nuxt generate",
     "preview": "nuxt preview",
     "postinstall": "nuxt prepare"
@@ -12,8 +14,12 @@
   "dependencies": {
     "@nuxtjs/tailwindcss": "^6.13.1",
     "firebase": "^11.2.0",
+    "lucide-vue-next": "^0.474.0",
     "nuxt": "^3.15.3",
     "vue": "latest",
     "vue-router": "latest"
+  },
+  "devDependencies": {
+    "@nuxtjs/pwa": "^3.3.5"
   }
 }

@@ -1,40 +1,97 @@
 <template>
-    <div v-if="data"  class="  flex h-screen w-screen flex-col" :style="getBackground" >
+    <div v-if="data" class="  flex h-screen w-screen flex-col " :style="getBackground">
 
         <div class="w-2/3 mx-auto pt-10">
             <div class="mx-auto">
-                <img :src="data.logo" class=" h-20 m-auto my-2 rounded-full" alt="logo"/>                
+                <img :src="data.logo" class=" h-20 m-auto my-2 rounded-full" alt="logo" />
                 <h1 class="font-semibold text-center text-3xl uppercase text-white">{{ data.name }} </h1>
             </div>
             <div class="flex justify-between w-2/3 mx-auto my-3">
-                <img v-for="item in data.socials" :src="`/${item.name}.svg`" class="h-8 " @click="navigateTo(item.url, {external: true})"/>
+                <img v-for="item in data.socials" :src="`/${item.name}.svg`" class="h-8 "
+                    @click="navigateTo(item.url, { external: true })" />
+            </div>
+
+            {{ statusMessage }}
+
+            <div v-if="statusMessage.status == 'INIT'" class="my-5">
+                <input type="mail" class=" px-3 py-2 text-lg font-semibold border-2 border-white w-full rounded-lg"
+                    v-model="emailSubscribe" placeholder="Enter your email" />
+                <button @click="haveAnAccount"
+                    class="text-lg font-semibold bg-violet-900 text-white w-full py-3 rounded-lg flex  justify-center my-3">
+                    <p class="flex">subscribe
+                        <MoveRight class="m-auto mx-2" />
+                    </p>
+                </button>
+            </div>
+
+
+            <div v-if="statusMessage.status == 'NOT_VERIFIED' && errorMessage.message.length < 1" class="my-5">
+                <div>
+                    <p class="text-lg font-semibold text-white bg-violet-900/5 p-2 rounded-lg ">
+                        {{ statusMessage.message }}
+                    </p>
+                </div>
+
+            </div>
+
+
+
+            <div v-if="statusMessage.status == 'NEED_INSTALL' && errorMessage.message.length < 1" class="my-5">
+                <div>
+                    <p class="text-lg font-semibold text-white bg-violet-900/5 p-2 rounded-lg ">for get notification
+                        from your creators, install the app first</p>
+                    <button
+                        class="text-lg font-semibold bg-violet-900 text-white w-full py-3 rounded-lg flex  justify-center my-3"
+                        @click="askInstall">install</button>
+                </div>
+            </div>
+
+
+            <div v-if="(statusMessage.status == 'NOTIFICATION' && errorMessage.message.length < 1) || !haveNotification"
+                class="my-5">
+                <div>
+                    <p class="text-lg font-semibold text-white bg-violet-900/5 p-2 rounded-lg ">Ready enable the
+                        notification and get info from your content creator</p>
+                    <button
+                        class="text-lg font-semibold bg-violet-900 text-white w-full py-3 rounded-lg flex  justify-center my-3"
+                        @click="askNotification">enable notification</button>
+                </div>
+            </div>
+
+            <div v-if="statusMessage.status == 'INSTALLED'">
+                <p class="text-lg font-semibold text-white bg-violet-900/5 p-2 rounded-lg ">{{ statusMessage.message }}
+                </p>
             </div>
         </div>
-        <div class="flex w-fit mx-auto my-auto" v-if="haveNotification">
-            <button @click="askNotification"
-                class=" mx-auto w-fit max-w-60 px-5 py-2 text-xl font-semibold  border-2 border-white rounded-lg" :style="`color: #${data.color.text ?? 'fff'}`">{{ data.notify }}</button> 
-        </div>
-
-        <div class="my-auto" v-else>
-            <p class="w-2/3 mx-auto text-xl my-auto  rounded-lg p-3 font-sans font-semibold" :style="`color: #${ data.color.text ?? 'fff'};`" :class="`bg-[#${data.color.bg ?? '000'}]/30`">Thanks for subscribe, you will receive info soon</p>
-        </div>
-
     </div>
 </template>
 <script lang="ts" setup>
-import { getMessaging, getToken  } from 'firebase/messaging';
+import { MoveRight } from 'lucide-vue-next';
+import { getMessaging, getToken } from 'firebase/messaging';
 import { app } from '@/config';
 
 const route = useRoute();
 const router = useRouter();
 
 const haveNotification = computed(() => {
-    return Notification.permission !== 'granted';
-    
+    return Notification.permission === 'granted';
+
 });
-
 const runtime = useRuntimeConfig();
+const api = runtime.public.api + '/sw/read';
 
+
+
+
+
+
+const state = ref('');
+const emailSubscribe = ref('');
+
+const statusMessage = ref({
+    message: '',
+    status: ''
+})
 
 type SocialInfo = {
     name: string,
@@ -47,6 +104,10 @@ const data = ref({
     socials: [] as SocialInfo[],
     description: '',
     notify: '',
+    agent: {
+        os: '',
+        navigator: ''
+    },
     color: {
         from: '',
         to: '',
@@ -55,9 +116,23 @@ const data = ref({
     }
 })
 
+
+function CopyLink() {
+
+    const url = runtime.public.hostname + '/' + getParams();
+
+    navigator.clipboard.writeText(url).then(() => {
+        alert('Link copied to clipboard');
+    }).catch((err) => {
+        alert('An error occurred, please try again later');
+    });
+}
+
 const getBackground = computed(() => {
+
+
     return {
-        background: `linear-gradient(90deg, #${data.value.color.from} 0%, #${data.value.color.to} 100%)`
+        background: `linear-gradient(90deg, ${data.value.color.from} 0%, ${data.value.color.to} 100%)`
     }
 });
 
@@ -74,8 +149,225 @@ function getParams() {
 }
 
 const messaging = getMessaging(app);
+let deferedPrompt = ref();
 
 
+function loadDefered() {
+
+    console.log('loadDefered');
+
+}
+
+
+
+
+
+
+
+async function askInstall() {
+
+
+
+
+    if ('serviceWorker' in navigator) {
+        try {
+            const registration = await navigator.serviceWorker.register('/sw.js');
+            console.log('Service worker registered', registration);
+
+            console.log({registration});
+            
+
+            if (registration.activate) {
+
+                const payload = {
+                    email: emailSubscribe.value,
+                }
+                const response = await fetch(runtime.public.api + '/install', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json'
+                    },
+                    body: JSON.stringify(payload),
+                })
+
+                if (response.status == 200) {
+                    state.value = {
+                        message: 'notification',
+                        status: 'INSTALL'
+                    };
+                }
+
+
+            }
+
+
+            console.log('Service worker registration successful with scope: ', registration);
+
+        } catch (error) {
+            console.log('Service worker registration failed', error);
+        }
+    }
+}
+
+
+loadManifest();
+
+
+
+function verifyPermission() {
+    state.value = Notification.permission == 'granted' ? 'notification' : '';
+}
+
+const errorMessage = computed(() => {
+
+
+    const url = runtime.public.hostname + '/' + getParams();
+
+    data.value.agent = {
+        os: 'android',
+        navigator: 'chrome'
+    }
+
+
+    if (/firefox/.test(data.value.agent.navigator) && data.value.agent.os == 'android') {
+
+        state.value = 'error';
+        return {
+            message: 'firefox is not implemented, please copy the link and open it on chrome',
+            os: 'android'
+        }
+    }
+
+    if (/chrome|firefox/.test(data.value.agent.navigator) && data.value.agent.os == 'iphone') {
+        state.value = 'error';
+
+        return {
+            message: 'ios support notification only by safari, Tap the "Share" button (📤) and select "Open in Safari".',
+            os: 'ios'
+        }
+    }
+
+    if (/laptop/.test(data.value.agent.os) && data.value.agent.os == 'laptop') {
+        state.value = 'error';
+
+        return {
+            message: 'This feature is not available on laptop, please use a mobile device we send you the link by email',
+            os: 'laptop'
+        }
+    }
+
+    return {
+        message: '',
+        os: ''
+    };
+
+})
+
+
+async function haveAnAccount() {
+
+    emailSubscribe.value = "timoth.david@gmail.com";
+    if (emailSubscribe.value.length == 0) {
+        alert('Please enter your email');
+        return;
+    }
+
+
+    const payload = {
+        email: emailSubscribe.value,
+        code: getParams()
+
+    }
+    const response = await fetch(runtime.public.api + '/account', {
+        method: 'POST',
+        headers: {
+            'Content-Type': 'application/json'
+        },
+        body: JSON.stringify(payload),
+    })
+
+    const content = await response.json();
+
+    console.log(content.data.message);
+
+
+    if (content.status_code == 200) {
+
+
+        if (content.data.message == "WELCOME_MAIL_SEND") {
+            statusMessage.value = {
+                message: 'An email has been sent to you, please check your inbox to verify your account',
+                status: 'WELCOME_MAIL_SEND'
+            }
+            return;
+        }
+
+        if (content.data.message == 'NEED_VERIFICATION') {
+            statusMessage.value = {
+                message: 'Your account is not verified, please check your inbox to verify your account',
+                status: 'NOT_VERIFIED'
+            }
+            return;
+        }
+
+        if (content.data.message == 'NEED_NOTIFICATION') {
+            statusMessage.value = {
+                message: 'enable notification for full support of the app',
+                status: 'NOTIFICATION'
+            }
+        }
+
+
+        if (content.data.message == 'NEED_INSTALL') {
+            statusMessage.value = {
+                message: 'Your account is verified, now install the app to receive notifications',
+                status: 'NEED_INSTALL'
+            }
+            return;
+        }
+
+        if (content.data.message == "INSTALLED") {
+            statusMessage.value = {
+                message: 'You will receive soon the first notification from your content creator, stay tuned',
+                status: 'INSTALLED'
+            }
+            return;
+        }
+
+        state.value = 'init';
+
+
+        verifyPermission();
+    }
+
+}
+
+
+async function loadManifest() {
+
+    const response = await fetch(runtime.public.api + '/manifest/' + getParams(), {
+        method: 'GET',
+        headers: {
+            'Content-Type': 'application/json'
+        },
+    });
+
+    const content = await response.json();
+
+    if (content.data) {
+        const manifestBlob = new Blob([JSON.stringify(content.data)], { type: "application/json" });
+        const manifestURL = URL.createObjectURL(manifestBlob);
+        const manifestLink = document.createElement("link");
+
+        manifestLink.rel = "manifest";
+        manifestLink.href = manifestURL;
+        document.head.appendChild(manifestLink);
+
+    }
+
+
+
+}
 
 async function fetchInfoNotification() {
 
@@ -90,61 +382,55 @@ async function fetchInfoNotification() {
 
     if (content.data) {
         data.value = content.data;
-    } else {
-        alert('No data found');
-        router.back();
     }
-
 }
-
 
 async function askNotification() {
 
 
-    getToken(messaging, { vapidKey: runtime.public.vapid_key }).then(async (currentToken) => {
-        if (currentToken) {
-            
+    try {
+        const permission = await Notification.requestPermission();
+        console.log(permission);
+        if (permission === 'granted') {
+            statusMessage.value = {
+                message: 'You will receive soon the first notification from your content creator, stay tuned',
+                status: 'INSTALLED'
+            }
+
             const body = {
-                token: currentToken,
-                url: getParams()
-            };
-
-            const content = await fetch(runtime.public.api, {
-                method: 'POST',
-                headers: {
-                    'Content-Type': 'application/json'
-                },
-                body: JSON.stringify(body)
-            });
-
-            const data = await content.json();
-
-            
-
-            if(data.data.status === 'already_exist') {
-                alert('You are already subscribed to this content');
-                return;
+                email: emailSubscribe.value,
+                code: getParams(),
+                token: ''
             }
 
-            if (data.data.status === 'success') {
-                alert('You will be notified when new content is available');
-            } else {
-                alert('An error occurred, please try again later');
-            }
+            await haveAnAccount();
+        
 
-        } else {
-            // Show permission request UI
-            console.log('No registration token available. Request permission to generate one.');
-            // ...
+            // const content = await fetch(runtime.public.api + '/notification', {
+            //     method: 'POST',
+            //     headers: {
+            //         'Content-Type': 'application/json'
+            //     },
+            //     body: JSON.stringify(body)
+            // });
+            // const data = await content.json();
+            // if (content.status == 201) {
+            //     await haveAnAccount();
+        //    }
+
         }
-    }).catch((err) => {
-        console.log('An error occurred while retrieving token. ', err);
-        // ...
-    });
+    } catch (error) {
+        console.log('error', error);
+    }
 }
 
+
+
+
 onMounted(async () => {
+    await askInstall();
     await fetchInfoNotification();
+    statusMessage.value.status = 'INIT';
 })
 
 </script>
