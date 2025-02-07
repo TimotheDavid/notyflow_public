@@ -58,6 +58,17 @@
                 </div>
             </div>
 
+            <div v-if="(statusMessage.status == 'ERROR_NOTIFICATION' && errorMessage.message.length < 1) || !haveNotification"
+                class="my-5">
+                <div>
+                    <p class="text-lg font-semibold text-white bg-violet-900/5 p-2 rounded-lg ">You
+                        {{ statusMessage.message }}
+                    </p>
+                </div>
+
+
+            </div>
+
             <div v-if="statusMessage.status == 'INSTALLED'">
                 <p class="text-lg font-semibold text-white bg-violet-900/5 p-2 rounded-lg ">{{ statusMessage.message }}
                 </p>
@@ -69,9 +80,12 @@
 import { MoveRight } from 'lucide-vue-next';
 import { getMessaging, getToken } from 'firebase/messaging';
 import { app } from '@/config';
+import { storage } from '~/utils/storage';
 
 const route = useRoute();
 const router = useRouter();
+
+const { $initializeFirebase } = useNuxtApp();
 
 const haveNotification = computed(() => {
     return Notification.permission === 'granted';
@@ -81,7 +95,13 @@ const runtime = useRuntimeConfig();
 const api = runtime.public.api + '/sw/read';
 
 
+let deferedPrompt = ref<any>();
 
+window.addEventListener('beforeinstallprompt', (e) => {
+    e.preventDefault();
+    deferedPrompt.value = e;
+    console.log('beforeinstallprompt');
+});
 
 
 
@@ -148,8 +168,6 @@ function getParams() {
 
 }
 
-const messaging = getMessaging(app);
-let deferedPrompt = ref();
 
 
 function loadDefered() {
@@ -166,45 +184,50 @@ function loadDefered() {
 
 async function askInstall() {
 
-
-
-
     if ('serviceWorker' in navigator) {
+
         try {
+
             const registration = await navigator.serviceWorker.register('/sw.js');
             console.log('Service worker registered', registration);
 
-            console.log({registration});
-            
-
-            if (registration.activate) {
-
-                const payload = {
-                    email: emailSubscribe.value,
-                }
-                const response = await fetch(runtime.public.api + '/install', {
-                    method: 'POST',
-                    headers: {
-                        'Content-Type': 'application/json'
-                    },
-                    body: JSON.stringify(payload),
-                })
-
-                if (response.status == 200) {
-                    state.value = {
-                        message: 'notification',
-                        status: 'INSTALL'
-                    };
-                }
+            console.log('Service worker registered', registration);
 
 
+            if (registration.active) {
+
+                deferedPrompt.value.prompt();
+                deferedPrompt.value.userChoice.then(async (choiceResult: any) => {
+                    if (choiceResult.outcome === 'accepted') {
+                        deferedPrompt.value = null;
+
+                        const payload = {
+                            email: emailSubscribe.value,
+                            code: ''
+                        }
+
+
+                        const response = await fetch(runtime.public.api + '/install', {
+                            method: 'POST',
+                            headers: {
+                                'Content-Type': 'application/json'
+                            },
+                            body: JSON.stringify(payload),
+                        });
+
+                        const content = await response.json();
+
+                        if (content.status_code == 200) {
+                        
+                            await haveAnAccount();
+                        }
+                    } else {
+                        console.log('User dismissed the A2HS prompt');
+                    }
+                });   
             }
-
-
-            console.log('Service worker registration successful with scope: ', registration);
-
         } catch (error) {
-            console.log('Service worker registration failed', error);
+            console.log('error', error);
         }
     }
 }
@@ -266,12 +289,10 @@ const errorMessage = computed(() => {
 
 async function haveAnAccount() {
 
-    emailSubscribe.value = "timoth.david@gmail.com";
     if (emailSubscribe.value.length == 0) {
         alert('Please enter your email');
         return;
     }
-
 
     const payload = {
         email: emailSubscribe.value,
@@ -288,11 +309,18 @@ async function haveAnAccount() {
 
     const content = await response.json();
 
-    console.log(content.data.message);
 
+    const { user_id } = content.data;
+
+
+    try {
+        storage.saveUserId(user_id);
+    } catch (error) {
+        console.log('error', error);
+
+    }
 
     if (content.status_code == 200) {
-
 
         if (content.data.message == "WELCOME_MAIL_SEND") {
             statusMessage.value = {
@@ -387,36 +415,23 @@ async function fetchInfoNotification() {
 
 async function askNotification() {
 
-
     try {
         const permission = await Notification.requestPermission();
         console.log(permission);
         if (permission === 'granted') {
-            statusMessage.value = {
-                message: 'You will receive soon the first notification from your content creator, stay tuned',
-                status: 'INSTALLED'
-            }
+            const initToken = $initializeFirebase();
 
-            const body = {
-                email: emailSubscribe.value,
-                code: getParams(),
-                token: ''
+            if(initToken) {
+                haveAnAccount();
             }
-
-            await haveAnAccount();
         
-
-            // const content = await fetch(runtime.public.api + '/notification', {
-            //     method: 'POST',
-            //     headers: {
-            //         'Content-Type': 'application/json'
-            //     },
-            //     body: JSON.stringify(body)
-            // });
-            // const data = await content.json();
-            // if (content.status == 201) {
-            //     await haveAnAccount();
-        //    }
+        }
+        if (permission === 'denied') {
+            statusMessage.value = {
+                message: 'have denied the notification, please enable it to receive notification',
+                status: 'ERROR_NOTIFICATION'
+            }
+            return;
 
         }
     } catch (error) {
@@ -428,7 +443,6 @@ async function askNotification() {
 
 
 onMounted(async () => {
-    await askInstall();
     await fetchInfoNotification();
     statusMessage.value.status = 'INIT';
 })
