@@ -36,7 +36,7 @@ export const storage = {
     const db = await this.initDB();
     return new Promise((resolve, reject) => {
       const transaction = (db as any).transaction(STORE_NAME, 'readwrite');
-      const store = transaction.objectStore(STORE_NAME);
+      const store = transaction.objectStore(STORE_NAME, {keyPath: 'key'});
 
       console.log(store);
 
