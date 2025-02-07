@@ -82,6 +82,7 @@ import { MoveRight } from 'lucide-vue-next';
 import { getMessaging, getToken } from 'firebase/messaging';
 import { app } from '@/config';
 import { storage } from '~/utils/storage';
+import firebase from 'firebase/compat/app';
 
 const route = useRoute();
 const router = useRouter();
@@ -438,8 +439,11 @@ async function fetchInfoNotification() {
 
 async function askNotification() {
 
-    if(isIOS()) {
-        return;
+    if(!firebase.messaging.isSupported()) {
+        statusMessage.value = {
+            message: 'Your browser does not support notification, please use chrome or firefox',
+            status: 'ERROR_NOTIFICATION'
+        }
     }
 
     try {
