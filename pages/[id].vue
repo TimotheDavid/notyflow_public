@@ -89,6 +89,9 @@ const router = useRouter();
 const { $initializeFirebase } = useNuxtApp();
 
 const haveNotification = computed(() => {
+    if(!Notification) return;
+
+
     return Notification.permission === 'granted';
 
 });
