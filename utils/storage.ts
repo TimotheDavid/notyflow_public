@@ -17,6 +17,10 @@ export const storage = {
       const db = new Dexie(DB_NAME) as Dexie & {
         user: EntityTable<NotyflowDatabase, 'id'>;
       };
+
+      db.version(1).stores({
+        user: '++id, user_id'
+      });
       return db;
   },
 
@@ -29,6 +33,9 @@ export const storage = {
       user_id: userId
     }
 
+    console.log(db);
+    
+
     const current = await this.getUserId();
     !current ? db.user.add(record) : db.user.put({ id: 1, user_id: userId});
     
@@ -37,9 +44,8 @@ export const storage = {
   async getUserId() {
     const localUserId = localStorage.getItem(USER_ID_KEY);
 
-    console.log({ localUserId});
     
-    if (localUserId) return parseInt(localUserId);
+    if (localUserId) return localUserId;
 
     const db = await  this.initDB();
 

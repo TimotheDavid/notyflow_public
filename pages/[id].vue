@@ -12,6 +12,7 @@
             </div>
 
             {{ statusMessage }}
+            {{ deferedPrompt }}
 
             <div v-if="statusMessage.status == 'INIT'" class="my-5">
                 <input type="mail" class=" px-3 py-2 text-lg font-semibold border-2 border-white w-full rounded-lg"
@@ -95,7 +96,7 @@ const runtime = useRuntimeConfig();
 const api = runtime.public.api + '/sw/read';
 
 
-let deferedPrompt = ref<any>();
+let deferedPrompt = ref({});
 
 window.addEventListener('beforeinstallprompt', (e) => {
     e.preventDefault();
@@ -106,7 +107,7 @@ window.addEventListener('beforeinstallprompt', (e) => {
 
 
 const state = ref('');
-const emailSubscribe = ref('');
+const emailSubscribe = ref('timoth.david@gmail.com');
 
 const statusMessage = ref({
     message: '',
@@ -195,6 +196,9 @@ async function askInstall() {
 
 
             if (registration.active) {
+
+                console.log(deferedPrompt.value);
+                
 
                 deferedPrompt.value.prompt();
                 deferedPrompt.value.userChoice.then(async (choiceResult: any) => {
@@ -287,6 +291,8 @@ const errorMessage = computed(() => {
 })
 
 
+
+
 async function haveAnAccount() {
 
     if (emailSubscribe.value.length == 0) {
@@ -297,7 +303,6 @@ async function haveAnAccount() {
     const payload = {
         email: emailSubscribe.value,
         code: getParams()
-
     }
     const response = await fetch(runtime.public.api + '/account', {
         method: 'POST',
@@ -317,8 +322,10 @@ async function haveAnAccount() {
         storage.saveUserId(user_id);
     } catch (error) {
         console.log('error', error);
-
     }
+
+    console.log(content);
+    
 
     if (content.status_code == 200) {
 
