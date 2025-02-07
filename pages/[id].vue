@@ -422,6 +422,10 @@ async function fetchInfoNotification() {
 
 async function askNotification() {
 
+    if(!Notification) {
+        return;
+    }
+
     try {
         const permission = await Notification.requestPermission();
         console.log(permission);
