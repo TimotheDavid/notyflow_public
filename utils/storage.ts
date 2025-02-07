@@ -2,78 +2,49 @@
 const DB_NAME = 'NOTYFLOW';
 const STORE_NAME = 'user_id';
 const USER_ID_KEY = 'userId';
+import Dexie, { type EntityTable} from 'dexie';
+
+
+interface NotyflowDatabase {
+  id: number,
+  user_id: string;
+}
 
 // Shared storage utilities
 export const storage = {
   // IndexedDB operations for service worker access
   async initDB() {
-    return new Promise((resolve, reject) => {
-      const request = indexedDB.open(DB_NAME, 1);
-      
-      request.onerror = () => reject(request.error);
-      request.onsuccess = () => resolve(request.result);
-
-      
-      request.onupgradeneeded = (event) => {
-        //@ts-ignore
-        const db = event.target?.result;
-        if (!db.objectStoreNames.contains(STORE_NAME)) {
-          db.createObjectStore(STORE_NAME);
-        }
+      const db = new Dexie(DB_NAME) as Dexie & {
+        user: EntityTable<NotyflowDatabase, 'id'>;
       };
-    });
+      return db;
   },
 
-  async saveUserId(userId: string) {
-
-
-    console.log(userId);
-    
-    // Save to localStorage for app access
+  async saveUserId(userId: string) {    
     localStorage.setItem(USER_ID_KEY, userId);
     
-    // Save to IndexedDB for service worker access
     const db = await this.initDB();
-    return new Promise((resolve, reject) => {
-      const transaction = (db as any).transaction(STORE_NAME, 'readwrite');
-      const store = transaction.objectStore(STORE_NAME, {keyPath: 'key'});
 
-      console.log(store);
+    const record = {
+      user_id: userId
+    }
 
-      console.log(userId);
-      
-      const record = { key: USER_ID_KEY, value: userId }
-      
-      console.log(record);
-      
-
-      const request = store.put(record);
-      
-      request.onerror = () => reject(request.error);
-      request.onsuccess = () => resolve(request.result);
-    });
+    const current = await this.getUserId();
+    !current ? db.user.add(record) : db.user.put({ id: 1, user_id: userId});
+    
   },
 
   async getUserId() {
-    // Try localStorage first (faster)
     const localUserId = localStorage.getItem(USER_ID_KEY);
 
     console.log({ localUserId});
     
-    if (localUserId) return localUserId;
-    
-    // Fallback to IndexedDB
-    const db = await this.initDB();
-    return new Promise((resolve, reject) => {
+    if (localUserId) return parseInt(localUserId);
 
+    const db = await  this.initDB();
 
-        
-      const transaction = (db as any).transaction(STORE_NAME, 'readonly');
-      const store = transaction.objectStore(STORE_NAME);
-      const request = store.get(USER_ID_KEY);
-      
-      request.onerror = () => reject(request.error);
-      request.onsuccess = () => resolve(request.result);
-    });
+    const current = await db.user.get(1);
+
+    return current?.user_id ?? null;
   }
 };
