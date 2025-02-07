@@ -86,10 +86,21 @@ import { storage } from '~/utils/storage';
 const route = useRoute();
 const router = useRouter();
 
+
+
+function isIOS() {
+  const browserInfo = navigator.userAgent.toLowerCase();
+  
+  if (browserInfo.match('iphone') || browserInfo.match('ipad')) {
+    return true;
+  }  if (['iPad Simulator', 'iPhone Simulator', 'iPod Simulator', 'iPad', 'iPhone', 'iPod'].includes(navigator.platform)) {
+    return true;
+  }   return false;
+}
 const { $initializeFirebase } = useNuxtApp();
 
 const haveNotification = computed(() => {
-    if(!Notification) return;
+    if(isIOS()) return;
 
 
     return Notification.permission === 'granted';
@@ -245,6 +256,8 @@ loadManifest();
 
 
 function verifyPermission() {
+
+    if(isIOS()) return;
     state.value = Notification.permission == 'granted' ? 'notification' : '';
 }
 
@@ -425,7 +438,7 @@ async function fetchInfoNotification() {
 
 async function askNotification() {
 
-    if(!Notification) {
+    if(isIOS()) {
         return;
     }
 
