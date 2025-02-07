@@ -42,8 +42,12 @@ export const storage = {
 
       console.log(userId);
       
+      const record = { key: USER_ID_KEY, value: userId }
       
-      const request = store.add({ key: USER_ID_KEY, value: userId });
+      console.log(record);
+      
+
+      const request = store.put(record);
       
       request.onerror = () => reject(request.error);
       request.onsuccess = () => resolve(request.result);
