@@ -3,16 +3,13 @@
 
         <div class="w-2/3 mx-auto pt-10">
             <div class="mx-auto">
-                <img :src="data.logo" class=" h-20 m-auto my-2 rounded-full" alt="logo" />
+                <!-- <img :src="data.logo" class=" h-20 m-auto my-2 rounded-full" alt="logo" /> -->
                 <h1 class="font-semibold text-center text-3xl uppercase text-white">{{ data.name }} </h1>
             </div>
             <div class="flex justify-between w-2/3 mx-auto my-3">
                 <img v-for="item in data.socials" :src="`/${item.name}.svg`" class="h-8 "
                     @click="navigateTo(item.url, { external: true })" />
             </div>
-
-            {{ statusMessage }}
-            {{ deferedPrompt }}
 
             <div v-if="statusMessage.status == 'INIT'" class="my-5">
                 <input type="mail" class=" px-3 py-2 text-lg font-semibold border-2 border-white w-full rounded-lg"
@@ -25,19 +22,15 @@
                 </button>
             </div>
 
-
-            <div v-if="statusMessage.status == 'NOT_VERIFIED' && errorMessage.message.length < 1" class="my-5">
+            <div v-if="statusMessage.status == 'NOT_VERIFIED'" class="my-5">
                 <div>
                     <p class="text-lg font-semibold text-white bg-violet-900/5 p-2 rounded-lg ">
                         {{ statusMessage.message }}
                     </p>
                 </div>
-
             </div>
 
-
-
-            <div v-if="statusMessage.status == 'NEED_INSTALL' && errorMessage.message.length < 1" class="my-5">
+            <div v-if="statusMessage.status == 'NEED_INSTALL'" class="my-5">
                 <div>
                     <p class="text-lg font-semibold text-white bg-violet-900/5 p-2 rounded-lg ">for get notification
                         from your creators, install the app first</p>
@@ -47,9 +40,7 @@
                 </div>
             </div>
 
-
-            <div v-if="(statusMessage.status == 'NOTIFICATION' && errorMessage.message.length < 1) || !haveNotification"
-                class="my-5">
+            <div v-if="statusMessage.status == 'NOTIFICATION'" class="my-5">
                 <div>
                     <p class="text-lg font-semibold text-white bg-violet-900/5 p-2 rounded-lg ">Ready enable the
                         notification and get info from your content creator</p>
@@ -59,15 +50,12 @@
                 </div>
             </div>
 
-            <div v-if="(statusMessage.status == 'ERROR_NOTIFICATION' && errorMessage.message.length < 1) || !haveNotification"
-                class="my-5">
+            <div v-if="(statusMessage.status == 'ERROR') && statusMessage.message.length > 0" class=" my-5">
                 <div>
-                    <p class="text-lg font-semibold text-white bg-violet-900/5 p-2 rounded-lg ">You
+                    <p class="text-lg font-semibold text-white bg-violet-900/5 p-2 rounded-lg ">
                         {{ statusMessage.message }}
                     </p>
                 </div>
-
-
             </div>
 
             <div v-if="statusMessage.status == 'INSTALLED'">
@@ -79,50 +67,28 @@
 </template>
 <script lang="ts" setup>
 import { MoveRight } from 'lucide-vue-next';
-import { getMessaging, getToken } from 'firebase/messaging';
-import { app } from '@/config';
 import { storage } from '~/utils/storage';
-import firebase from 'firebase/compat/app';
 
 const route = useRoute();
-const router = useRouter();
 
 
+let deferredPrompt : any;
 
-function isIOS() {
-  const browserInfo = navigator.userAgent.toLowerCase();
-  
-  if (browserInfo.match('iphone') || browserInfo.match('ipad')) {
-    return true;
-  }  if (['iPad Simulator', 'iPhone Simulator', 'iPod Simulator', 'iPad', 'iPhone', 'iPod'].includes(navigator.platform)) {
-    return true;
-  }   return false;
-}
+
+window.addEventListener('beforeinstallprompt', (event) => {
+            event.preventDefault();
+            deferredPrompt = event;
+            console.log('beforeinstallprompt');
+});
+
 const { $initializeFirebase } = useNuxtApp();
 
-const haveNotification = computed(() => {
-    if(isIOS()) return;
-
-
-    return Notification.permission === 'granted';
-
-});
 const runtime = useRuntimeConfig();
-const api = runtime.public.api + '/sw/read';
-
-
-let deferedPrompt = ref({});
-
-window.addEventListener('beforeinstallprompt', (e) => {
-    e.preventDefault();
-    deferedPrompt.value = e;
-    console.log('beforeinstallprompt');
-});
 
 
 
 const state = ref('');
-const emailSubscribe = ref('timoth.david@gmail.com');
+const emailSubscribe = ref('');
 
 const statusMessage = ref({
     message: '',
@@ -133,6 +99,11 @@ type SocialInfo = {
     name: string,
     url: string
 }
+
+const agent = ref({
+    os: '',
+    navigator: ''
+})
 
 const data = ref({
     name: '',
@@ -152,6 +123,37 @@ const data = ref({
     }
 })
 
+function verifyOsNavigator() {
+    
+    if (data.value.agent.navigator == 'firefox' && data.value.agent.os == 'android') {
+        statusMessage.value = {
+            message: 'You are using firefox on android, please install the app to receive notification',
+            status: 'ERROR'
+        }
+        return false;
+    }
+
+    if(data.value.agent.navigator == 'chrome' && data.value.agent.os == 'ios') {
+        statusMessage.value = {
+            message: 'You are using chrome on ios, please use safari to use the app',
+            status: 'ERROR'
+        }
+        return false;
+    }
+
+    if(data.value.agent.navigator == 'firefox' && data.value.agent.os == 'ios') {
+        statusMessage.value = {
+            message: 'You are using firefox on ios, please use safari to use the app',
+            status: 'ERROR'
+        }
+        return false;
+    }
+
+    return true;
+
+}
+
+
 
 function CopyLink() {
 
@@ -165,8 +167,6 @@ function CopyLink() {
 }
 
 const getBackground = computed(() => {
-
-
     return {
         background: `linear-gradient(90deg, ${data.value.color.from} 0%, ${data.value.color.to} 100%)`
     }
@@ -184,41 +184,28 @@ function getParams() {
 
 }
 
-
-
-function loadDefered() {
-
-    console.log('loadDefered');
-
-}
-
-
-
-
-
-
-
 async function askInstall() {
 
     if ('serviceWorker' in navigator) {
 
+
+
+
+
         try {
-
             const registration = await navigator.serviceWorker.register('/sw.js');
-            console.log('Service worker registered', registration);
 
-            console.log('Service worker registered', registration);
+            console.log(registration);
+            
+            if (registration.active?.state == 'activated') {
+
+                console.log(deferredPrompt.value);
 
 
-            if (registration.active) {
-
-                console.log(deferedPrompt.value);
-                
-
-                deferedPrompt.value.prompt();
-                deferedPrompt.value.userChoice.then(async (choiceResult: any) => {
+                deferredPrompt.prompt();
+                deferredPrompt.userChoice.then(async (choiceResult: any) => {
                     if (choiceResult.outcome === 'accepted') {
-                        deferedPrompt.value = null;
+                        deferredPrompt.value = {};
 
                         const payload = {
                             email: emailSubscribe.value,
@@ -237,13 +224,13 @@ async function askInstall() {
                         const content = await response.json();
 
                         if (content.status_code == 200) {
-                        
+
                             await haveAnAccount();
                         }
                     } else {
                         console.log('User dismissed the A2HS prompt');
                     }
-                });   
+                });
             }
         } catch (error) {
             console.log('error', error);
@@ -256,61 +243,9 @@ loadManifest();
 
 
 
-function verifyPermission() {
-
-    if(isIOS()) return;
-    state.value = Notification.permission == 'granted' ? 'notification' : '';
-}
-
-const errorMessage = computed(() => {
-
-
-    const url = runtime.public.hostname + '/' + getParams();
-
-    data.value.agent = {
-        os: 'android',
-        navigator: 'chrome'
-    }
-
-
-    if (/firefox/.test(data.value.agent.navigator) && data.value.agent.os == 'android') {
-
-        state.value = 'error';
-        return {
-            message: 'firefox is not implemented, please copy the link and open it on chrome',
-            os: 'android'
-        }
-    }
-
-    if (/chrome|firefox/.test(data.value.agent.navigator) && data.value.agent.os == 'iphone') {
-        state.value = 'error';
-
-        return {
-            message: 'ios support notification only by safari, Tap the "Share" button (📤) and select "Open in Safari".',
-            os: 'ios'
-        }
-    }
-
-    if (/laptop/.test(data.value.agent.os) && data.value.agent.os == 'laptop') {
-        state.value = 'error';
-
-        return {
-            message: 'This feature is not available on laptop, please use a mobile device we send you the link by email',
-            os: 'laptop'
-        }
-    }
-
-    return {
-        message: '',
-        os: ''
-    };
-
-})
-
-
-
-
 async function haveAnAccount() {
+
+    emailSubscribe.value = "timoth.david@gmail.com"
 
     if (emailSubscribe.value.length == 0) {
         alert('Please enter your email');
@@ -327,9 +262,25 @@ async function haveAnAccount() {
             'Content-Type': 'application/json'
         },
         body: JSON.stringify(payload),
-    })
-
+    })    
+    
     const content = await response.json();
+
+    if(data.value.agent.os == 'laptop') {
+        statusMessage.value = {
+            message: 'You are using a laptop, please use your navigator on your mobile, we send you a link to enable it',
+            status: 'ERROR'
+        }
+        return;
+    }
+
+    if(!verifyOsNavigator()) return;
+    
+
+
+
+
+
 
 
     const { user_id } = content.data;
@@ -341,10 +292,13 @@ async function haveAnAccount() {
         console.log('error', error);
     }
 
-    console.log(content);
-    
-
     if (content.status_code == 200) {
+
+
+        statusMessage.value = {
+            message: '',
+            status: ''
+        }
 
         if (content.data.message == "WELCOME_MAIL_SEND") {
             statusMessage.value = {
@@ -386,10 +340,14 @@ async function haveAnAccount() {
             return;
         }
 
+        if(content.data.message == "RATE_LIMIT") {
+            statusMessage.value = {
+                message: 'we limit the number of user who can subscribe, please try again later',
+                status: 'ERROR'
+            }
+        }
+
         state.value = 'init';
-
-
-        verifyPermission();
     }
 
 }
@@ -397,11 +355,15 @@ async function haveAnAccount() {
 
 async function loadManifest() {
 
-    const response = await fetch(runtime.public.api + '/manifest/' + getParams(), {
-        method: 'GET',
+
+    const userId = await storage.getUserId();
+
+    const response = await fetch(runtime.public.api + '/manifest/', {
+        method: 'POST',
         headers: {
             'Content-Type': 'application/json'
         },
+        body: JSON.stringify({ code: getParams(), userId  }),
     });
 
     const content = await response.json();
@@ -414,12 +376,10 @@ async function loadManifest() {
         manifestLink.rel = "manifest";
         manifestLink.href = manifestURL;
         document.head.appendChild(manifestLink);
-
     }
-
-
-
 }
+
+
 
 async function fetchInfoNotification() {
 
@@ -435,27 +395,20 @@ async function fetchInfoNotification() {
     if (content.data) {
         data.value = content.data;
     }
+
+
 }
 
 async function askNotification() {
-
-    if(!firebase.messaging.isSupported()) {
-        statusMessage.value = {
-            message: 'Your browser does not support notification, please use chrome or firefox',
-            status: 'ERROR_NOTIFICATION'
-        }
-    }
-
     try {
         const permission = await Notification.requestPermission();
         console.log(permission);
         if (permission === 'granted') {
             const initToken = $initializeFirebase();
 
-            if(initToken) {
+            if (initToken) {
                 haveAnAccount();
             }
-        
         }
         if (permission === 'denied') {
             statusMessage.value = {
@@ -463,17 +416,14 @@ async function askNotification() {
                 status: 'ERROR_NOTIFICATION'
             }
             return;
-
         }
     } catch (error) {
         console.log('error', error);
     }
 }
 
-
-
-
 onMounted(async () => {
+    if(!verifyOsNavigator()) return;
     await fetchInfoNotification();
     statusMessage.value.status = 'INIT';
 })

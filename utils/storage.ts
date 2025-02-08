@@ -18,7 +18,7 @@ export const storage = {
         user: EntityTable<NotyflowDatabase, 'id'>;
       };
 
-      db.user.stores({
+      db.version(1).stores({
         user: '++id, user_id'
       });
       return db;

@@ -28,7 +28,7 @@ export default defineNuxtPlugin(async (nuxtApp) => {
             headers: {
               'Content-Type': 'application/json'
             },
-            body: JSON.stringify({ userId: userId })
+            body: JSON.stringify({ userId: userId, code: id })
         });
 
         const data = await config.json();

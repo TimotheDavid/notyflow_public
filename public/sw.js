@@ -32,6 +32,8 @@ self.addEventListener('notificationclick', function(event) {
   // You can add custom click handling here
 });
 
+
+
 self.addEventListener('pushsubscriptionchange', function(event) {
   // Handle subscription change
   console.log('Subscription changed', event);
@@ -64,7 +66,7 @@ async function getUserIdFromDB() {
 async function initializeFirebase() {
   if (userId) {
     try {
-      const response = await fetch('http://localhost:4000/public/credentials', {
+      const response = await fetch('https://buffalo-occurred-automation-traveller.trycloudflare.com/public', {
         method: 'POST',
         body: JSON.stringify({ userId }),
       });
