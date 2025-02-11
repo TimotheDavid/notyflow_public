@@ -72,16 +72,12 @@ import { storage } from '~/utils/storage';
 const route = useRoute();
 
 
-let deferredPrompt : any;
+let deferredPrompt  = ref();
+
+const {$pwa} = useNuxtApp();
 
 
-window.addEventListener('beforeinstallprompt', (event) => {
-            event.preventDefault();
-            deferredPrompt = event;
-            console.log('beforeinstallprompt');
-});
 
-const { $initializeFirebase } = useNuxtApp();
 
 const runtime = useRuntimeConfig();
 
@@ -115,6 +111,7 @@ const data = ref({
         os: '',
         navigator: ''
     },
+    vapid: '',
     color: {
         from: '',
         to: '',
@@ -122,6 +119,11 @@ const data = ref({
         bg: ''
     }
 })
+
+async function registerServiceWorker() {
+  await navigator.serviceWorker.register('/sw.js');
+  console.log("registerServiceWorker");
+}
 
 function verifyOsNavigator() {
     
@@ -175,43 +177,68 @@ const getBackground = computed(() => {
 function getParams() {
 
     const params = route.params.id;
-
-
     if (params) {
         return params as string;
     }
+}
+
+
+async function verifyIsInstalled() {
+
+  if(!$pwa) return;
+
+  if(!$pwa.isPWAInstalled) return;
+
+  const payload = {
+    userId: await storage.getUserId(),
+    code: getParams()
+  }
+
+  const response = await fetch(runtime.public.api + '/install', {
+      method: 'POST',
+    headers: {
+        'Accept': 'application/json',
+      'Content-Type': 'application/json'
+      },
+      body: JSON.stringify(payload)
+  });
+}
+
+async function verifyNotification () {
+
+  await Notification.requestPermission((permission) => {
+      if(permission === 'denied') {
+          statusMessage.value = {
+              message: "You need to enable the notification to fully use the app",
+              status: 'ERROR'
+          }
+      }
+
+  })
 
 
 }
 
+
 async function askInstall() {
 
+
+    if(!$pwa) return;
+
+
     if ('serviceWorker' in navigator) {
+        const installed = await $pwa.install();
 
 
 
+        const payload = {
+          userId: await storage.getUserId(),
+          code: getParams()
+        }
 
 
-        try {
-            const registration = await navigator.serviceWorker.register('/sw.js');
 
-            console.log(registration);
-            
-            if (registration.active?.state == 'activated') {
-
-                console.log(deferredPrompt.value);
-
-
-                deferredPrompt.prompt();
-                deferredPrompt.userChoice.then(async (choiceResult: any) => {
-                    if (choiceResult.outcome === 'accepted') {
-                        deferredPrompt.value = {};
-
-                        const payload = {
-                            email: emailSubscribe.value,
-                            code: ''
-                        }
-
+        if(installed && installed.outcome == 'accepted') {
 
                         const response = await fetch(runtime.public.api + '/install', {
                             method: 'POST',
@@ -227,30 +254,23 @@ async function askInstall() {
 
                             await haveAnAccount();
                         }
-                    } else {
-                        console.log('User dismissed the A2HS prompt');
-                    }
-                });
-            }
-        } catch (error) {
-            console.log('error', error);
         }
     }
 }
 
 
-loadManifest();
+
 
 
 
 async function haveAnAccount() {
-
-    emailSubscribe.value = "timoth.david@gmail.com"
-
     if (emailSubscribe.value.length == 0) {
         alert('Please enter your email');
         return;
     }
+
+    await verifyIsInstalled();
+    await verifyNotification();
 
     const payload = {
         email: emailSubscribe.value,
@@ -263,6 +283,7 @@ async function haveAnAccount() {
         },
         body: JSON.stringify(payload),
     })    
+    await loadManifest();
     
     const content = await response.json();
 
@@ -389,7 +410,6 @@ async function fetchInfoNotification() {
             'Content-Type': 'application/json'
         },
     });
-
     const content = await response.json();
 
     if (content.data) {
@@ -400,29 +420,59 @@ async function fetchInfoNotification() {
 }
 
 async function askNotification() {
-    try {
-        const permission = await Notification.requestPermission();
-        console.log(permission);
-        if (permission === 'granted') {
-            const initToken = $initializeFirebase();
 
-            if (initToken) {
-                haveAnAccount();
-            }
-        }
-        if (permission === 'denied') {
-            statusMessage.value = {
-                message: 'have denied the notification, please enable it to receive notification',
-                status: 'ERROR_NOTIFICATION'
-            }
-            return;
-        }
-    } catch (error) {
-        console.log('error', error);
+
+    if(!$pwa) return;
+
+    if(!$pwa.isPWAInstalled) {
+        askInstall();
+
     }
+
+    const notification = Notification.requestPermission(async (request) => {
+
+      if(request == "granted") {
+
+        const registration = await navigator.serviceWorker.getRegistration('/');
+
+        if(!registration) return;
+
+        const payload = {
+          userVisibleOnly: true,
+          applicationServerKey: data.value.vapid,
+        }
+        const subscription = await registration.pushManager.subscribe(payload);
+
+      await fetch(runtime.public.api + '/notification', {
+        method: 'POST',
+
+        headers: {
+          'Content-Type': 'application/json'
+        },
+        body: JSON.stringify({ subscription, code: getParams(), userId: await storage.getUserId() }),
+      });
+
+        statusMessage.value = {
+          message: 'You will receive soon the first notification from your content creator, stay tuned',
+          status: 'INSTALLED'
+        }
+      }
+
+
+
+    })
+
+
+    //
+
+
+
+
+
 }
 
 onMounted(async () => {
+    await registerServiceWorker();
     if(!verifyOsNavigator()) return;
     await fetchInfoNotification();
     statusMessage.value.status = 'INIT';

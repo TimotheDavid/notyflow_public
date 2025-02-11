@@ -4,7 +4,21 @@ import * as fs from 'fs';
 export default defineNuxtConfig({
   compatibilityDate: "2024-11-01",
   devtools: { enabled: true },
-  modules: ["@nuxtjs/tailwindcss"],
+  modules: ["@nuxtjs/tailwindcss", "@vite-pwa/nuxt"],
+  pwa: {
+
+    devOptions: {
+        enabled: true,
+    },
+    registerType: 'prompt',
+    injectRegister: false,
+    selfDestroying: false,
+    disable: true,
+    client: {
+      installPrompt: true
+    },
+
+  },
   app: {
     head: {
       link: [
@@ -15,7 +29,7 @@ export default defineNuxtConfig({
   },
   vite: {
     server: {
-      allowedHosts: ['.trycloudflare.com']
+      allowedHosts: ['.letschoose.fr', '7be7-90-126-116-108.ngrok-free.app']
     }
   },
   ssr: false,

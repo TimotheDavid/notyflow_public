@@ -1,109 +1,144 @@
-importScripts('https://www.gstatic.com/firebasejs/9.0.0/firebase-app-compat.js');
-importScripts('https://www.gstatic.com/firebasejs/9.0.0/firebase-messaging-compat.js');
 
-const DB_NAME = 'NOTYFLOW';
-const STORE_NAME = 'user_id';
-const USER_ID_KEY = 'userId';
-let userId = null;
+async function fetchImage(url) {
+  const response = await fetch(url);
+  const data = await response.json();
+  return data.url;
+}
 
-// Initialize empty firebase config
-let firebaseConfig = null;
-
-// Handle background messages
-self.addEventListener('push', function(event) {
-  if (!event.data) return;
+async function handleRequest(event) {
 
   const payload = event.data.json();
-  const notificationTitle = payload.notification.title;
-  const notificationOptions = {
-    body: payload.notification.body,
-    icon: payload.notification.icon,
-  };
 
-  event.waitUntil(
-    self.registration.showNotification(notificationTitle, notificationOptions)
-  );
+  console.log(payload);
+  const {icon , image } = payload;
+  const iconURL = await fetchImage(icon);
+  const imageURL = await fetchImage(image);
+
+  console.log("Icon", image);
+
+    await self.registration.showNotification(payload.title, {
+      message: payload.body,
+      icon: iconURL,
+      image: imageURL,
+      actions: payload.actions,
+      data: payload.data
+    });
+}
+
+async function open_app(event) {
+  const url = event.notification.payload.url;
+  const client = await self.clients.openWindow(url);
+  client.focus();
+}
+
+
+function fetchCurrentPayload(id, payload) {
+  return payload.find((item) => item.action === id);
+}
+
+// send the analytics to the backend 
+async function sendAnalytics( action,data,  userId, info) {
+
+  const content = {
+    action: action,
+    data,
+    userId: userId,
+    notification: info.id
+  }
+
+  const response = await fetch(info.api +info.analytics, {
+    method: 'POST',
+    headers: {
+      'Content-Type': 'application/json'
+    },
+    body: JSON.stringify(content)
+  });
+
+  const response_content = await response.json();
+
+  console.log(response_content);
+}
+
+async function open_url(url) {
+  await self.clients.openWindow(url);
+}
+
+
+async function  send_text(info, userId, event) {
+
+  if(!event.hasOwnProperty('reply')) return;
+  console.log(event.reply);
+  
+}
+
+
+
+async function actionClick(event) {
+  // get the current action 
+  // destructure => [action]-[id]
+  // send to the event handler the action and the id
+
+  const payload = event.notification.data;
+  const current = event.action;
+  const userId = payload.info.user;
+
+  
+  // we test if the current action have an iphen 
+  if(!/-/.test(current)) return;
+
+  // destructuring
+  const [action, id] = current.split('-');
+
+  const data = payload.payload.find((item) => item.action === id);
+
+  await sendAnalytics(current, data, userId, payload.info);
+
+  switch(action) {
+    case 'url':
+      await open_url(data.url);
+      break;
+    case 'text':
+      await send_text(payload.info, userId, event);
+      break;
+    }
+}
+
+// Handle background messages
+self.addEventListener("push", function (event) {
+  event.waitUntil(handleRequest(event));
 });
 
-self.addEventListener('notificationclick', function(event) {
+self.addEventListener('notificationclick', (event) => {
+  if(!event.action){
+    // Was a normal notification click
+    console.log('Notification Click.');
+    return;
+  }
+
+  event.waitUntil(actionClick(event));
+
+
+
+})
+self.addEventListener("notificationclick", function (event) {
   event.notification.close();
   // Add your click handling logic here
   const clickedNotification = event.notification;
   // You can add custom click handling here
 });
 
-
-
-self.addEventListener('pushsubscriptionchange', function(event) {
+self.addEventListener("pushsubscriptionchange", function (event) {
   // Handle subscription change
-  console.log('Subscription changed', event);
+  console.log("Subscription changed", event);
 });
 
-async function getUserIdFromDB() {
-  const db = await new Promise((resolve, reject) => {
-    const request = indexedDB.open(DB_NAME, 1);
-    
-    request.onupgradeneeded = (event) => {
-      const db = event.target.result;
-      if (!db.objectStoreNames.contains(STORE_NAME)) {
-        db.createObjectStore(STORE_NAME);
-      }
-    };
-    
-    request.onerror = () => reject(request.error);
-    request.onsuccess = () => resolve(request.result);
-  });
-
-  return new Promise((resolve, reject) => {
-    const transaction = db.transaction(STORE_NAME, 'readonly');
-    const store = transaction.objectStore(STORE_NAME);
-    const request = store.get(USER_ID_KEY);
-    request.onerror = () => reject(request.error);
-    request.onsuccess = () => resolve(request.result);
-  });
-}
-
-async function initializeFirebase() {
-  if (userId) {
-    try {
-      const response = await fetch('https://buffalo-occurred-automation-traveller.trycloudflare.com/public', {
-        method: 'POST',
-        body: JSON.stringify({ userId }),
-      });
-      const result = await response.json();
-      firebaseConfig = result.data;
-      
-      if (!firebase.apps.length) {
-        firebase.initializeApp(firebaseConfig);
-      }
-    } catch (error) {
-      console.error('Failed to initialize Firebase:', error);
-    }
-  }
-}
-
 // Install event
-self.addEventListener('install', event => {
-  event.waitUntil(
-    getUserIdFromDB()
-      .then(storedUserId => {
-        if (storedUserId) {
-          userId = storedUserId;
-          return initializeFirebase();
-        }
-      })
-  );
+self.addEventListener("install", (event) => {
+    self.skipWaiting();
 });
 
 // Activate event
-self.addEventListener('activate', event => {
+self.addEventListener("activate", (event) => {
   event.waitUntil(self.clients.claim());
 });
 
-// Message handler
-self.addEventListener('message', event => {
-  if (event.data && event.data.type === 'SET_USER_ID') {
-    userId = event.data.userId;
-    event.waitUntil(initializeFirebase());
-  }
-});
