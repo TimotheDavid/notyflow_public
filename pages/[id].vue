@@ -11,6 +11,7 @@
                     @click="navigateTo(item.url, { external: true })" />
             </div>
 
+
             <div v-if="statusMessage.status == 'INIT'" class="my-5">
                 <input type="mail" class=" px-3 py-2 text-lg font-semibold border-2 border-white w-full rounded-lg"
                     v-model="emailSubscribe" placeholder="Enter your email" />
@@ -40,7 +41,7 @@
                 </div>
             </div>
 
-            <div v-if="statusMessage.status == 'NOTIFICATION'" class="my-5">
+            <div v-if="statusMessage.status == 'NOTIFICATION' && checkStandalone" class="my-5">
                 <div>
                     <p class="text-lg font-semibold text-white bg-violet-900/5 p-2 rounded-lg ">Ready enable the
                         notification and get info from your content creator</p>
@@ -50,7 +51,16 @@
                 </div>
             </div>
 
-            <div v-if="(statusMessage.status == 'ERROR') && statusMessage.message.length > 0" class=" my-5">
+
+          <div v-if="statusMessage.status == 'NOTIFICATION' && !checkStandalone" class="my-5">
+            <div>
+              <p class="text-lg font-semibold text-white bg-violet-900/5 p-2 rounded-lg ">Open the app and get the best of your content creator</p>
+            </div>
+          </div>
+
+
+
+          <div v-if="(statusMessage.status == 'ERROR') && statusMessage.message.length > 0" class=" my-5">
                 <div>
                     <p class="text-lg font-semibold text-white bg-violet-900/5 p-2 rounded-lg ">
                         {{ statusMessage.message }}
@@ -81,6 +91,13 @@ const {$pwa} = useNuxtApp();
 
 const runtime = useRuntimeConfig();
 
+
+
+const checkStandalone = computed(() => {
+  return window.matchMedia('(display-mode: standalone)').matches;
+
+
+})
 
 
 const state = ref('');
@@ -205,17 +222,12 @@ async function verifyIsInstalled() {
 }
 
 async function verifyNotification () {
-
-  await Notification.requestPermission((permission) => {
-      if(permission === 'denied') {
-          statusMessage.value = {
-              message: "You need to enable the notification to fully use the app",
-              status: 'ERROR'
-          }
+  if(Notification.permission == "granted") {
+      statusMessage.value = {
+        message: "You need to enable the notification to fully use the app",
+        status: 'ERROR'
       }
-
-  })
-
+  }
 
 }
 
@@ -264,6 +276,7 @@ async function askInstall() {
 
 
 async function haveAnAccount() {
+
     if (emailSubscribe.value.length == 0) {
         alert('Please enter your email');
         return;
@@ -296,19 +309,11 @@ async function haveAnAccount() {
     }
 
     if(!verifyOsNavigator()) return;
-    
-
-
-
-
-
-
-
     const { user_id } = content.data;
 
 
     try {
-        storage.saveUserId(user_id);
+        await storage.saveUserId(user_id);
     } catch (error) {
         console.log('error', error);
     }
@@ -337,7 +342,7 @@ async function haveAnAccount() {
             return;
         }
 
-        if (content.data.message == 'NEED_NOTIFICATION') {
+        if (content.data.message == 'NEED_NOTIFICATION' && checkStandalone) {
             statusMessage.value = {
                 message: 'enable notification for full support of the app',
                 status: 'NOTIFICATION'
