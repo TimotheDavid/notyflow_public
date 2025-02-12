@@ -1,7 +1,7 @@
 <template>
     <div v-if="data" class="  flex h-screen w-screen flex-col " :style="getBackground">
 
-        <div class="w-2/3 mx-auto pt-10">
+        <div class="w-9/12 mx-auto pt-10">
             <div class="mx-auto">
                 <!-- <img :src="data.logo" class=" h-20 m-auto my-2 rounded-full" alt="logo" /> -->
                 <h1 class="font-semibold text-center text-3xl uppercase text-white">{{ data.name }} </h1>
@@ -10,8 +10,6 @@
                 <img v-for="item in data.socials" :src="`/${item.name}.svg`" class="h-8 "
                     @click="navigateTo(item.url, { external: true })" />
             </div>
-
-
             <div v-if="statusMessage.status == 'INIT'" class="my-5">
                 <input type="mail" class=" px-3 py-2 text-lg font-semibold border-2 border-white w-full rounded-lg"
                     v-model="emailSubscribe" placeholder="Enter your email" />
@@ -58,6 +56,25 @@
             </div>
           </div>
 
+          <div v-if="statusMessage.status == 'ENABLE_IOS_NOTIFICATION'" class="my-5">
+            <div class="bg-violet-900 w-full p-3  rounded-lg  text-white" :class="notificationDisabled ? 'border-4 border-fuchsia-600': ''">
+              <h1 class="text-white font-bold">Notification are disabled by default on IOS</h1>
+              <p class="text-white underline">For enable them follow the process</p>
+              <ol class="gap-2" type="A">
+                <li>Open Settings</li>
+                <li>Go To Safari</li>
+                <li>Go To Notification</li>
+                <li>Find the current App</li>
+                <li>Come back and enable notification</li>
+              </ol>
+            </div>
+            <button
+                class="text-lg font-semibold bg-violet-900 text-white w-full py-3 rounded-lg flex  justify-center my-3"
+                @click="askNotification">enable notification</button>
+
+
+          </div>
+
 
 
           <div v-if="(statusMessage.status == 'ERROR') && statusMessage.message.length > 0" class=" my-5">
@@ -80,18 +97,8 @@ import { MoveRight } from 'lucide-vue-next';
 import { storage } from '~/utils/storage';
 
 const route = useRoute();
-
-
-let deferredPrompt  = ref();
-
 const {$pwa} = useNuxtApp();
-
-
-
-
 const runtime = useRuntimeConfig();
-
-
 
 const checkStandalone = computed(() => {
   return window.matchMedia('(display-mode: standalone)').matches;
@@ -99,10 +106,7 @@ const checkStandalone = computed(() => {
 
 })
 
-
-const state = ref('');
 const emailSubscribe = ref('');
-
 const statusMessage = ref({
     message: '',
     status: ''
@@ -117,6 +121,8 @@ const agent = ref({
     os: '',
     navigator: ''
 })
+
+const notificationDisabled = ref(false);
 
 const data = ref({
     name: '',
@@ -137,23 +143,70 @@ const data = ref({
     }
 })
 
+
+async function checkPWAInstalled() {
+
+
+  if(data.value.agent.navigator != 'safari' && data.value.agent.os != 'ios') return;
+
+  const isInstalled = window.matchMedia('(display-mode: standalone)').matches;
+
+  if(isInstalled) {
+    const getUserId = await storage.getUserId();
+
+    if(!getUserId) {
+      statusMessage.value = {
+        status: 'INIT',
+        message: ''
+      }
+    }
+
+    const response = await fetch(runtime.public.api + '/install', {
+        method: 'POST',
+      headers: {
+          'Content-Type': 'application/json',
+        'Accept': 'application/json',
+      },
+      body: JSON.stringify({
+          code: getParams(),
+          userId: getUserId
+      })
+    });
+  }
+
+}
+
+
+
 async function registerServiceWorker() {
 
-
-  if(!('serviceWorker' in navigator)) return;
+  if(!('serviceWorker' in navigator)) {
+      statusMessage.value = {
+        message: 'the app cannot be used in this navigator, please use chrome on android and safari on ios',
+        status: 'ERROR'
+      }
+      return;
+  };
 
   await navigator.serviceWorker.register('/sw.js');
   console.log("registerServiceWorker");
 }
 
 function verifyOsNavigator() {
-    
     if (data.value.agent.navigator == 'firefox' && data.value.agent.os == 'android') {
         statusMessage.value = {
             message: 'You are using firefox on android, please install the app to receive notification',
             status: 'ERROR'
         }
         return false;
+    }
+
+    if(data.value.agent.navigator == "ecosia") {
+      statusMessage.value = {
+        message: 'You are using ecosia, please use chrome on android and safari on ios',
+        status: 'ERROR'
+      }
+      return false;
     }
 
     if(data.value.agent.navigator == 'chrome' && data.value.agent.os == 'ios') {
@@ -171,22 +224,7 @@ function verifyOsNavigator() {
         }
         return false;
     }
-
     return true;
-
-}
-
-
-
-function CopyLink() {
-
-    const url = runtime.public.hostname + '/' + getParams();
-
-    navigator.clipboard.writeText(url).then(() => {
-        alert('Link copied to clipboard');
-    }).catch((err) => {
-        alert('An error occurred, please try again later');
-    });
 }
 
 const getBackground = computed(() => {
@@ -225,12 +263,15 @@ async function verifyIsInstalled() {
   });
 }
 
-async function verifyNotification () {
-  if(Notification.permission == "granted") {
+function verifyNotification () {
+  if(Notification.permission == "denied") {
       statusMessage.value = {
         message: "You need to enable the notification to fully use the app",
         status: 'ERROR'
       }
+      return;
+  }else {
+    return false;
   }
 
 }
@@ -238,21 +279,15 @@ async function verifyNotification () {
 
 async function askInstall() {
 
-
     if(!$pwa) return;
-
 
     if ('serviceWorker' in navigator) {
         const installed = await $pwa.install();
-
-
 
         const payload = {
           userId: await storage.getUserId(),
           code: getParams()
         }
-
-
 
         if(installed && installed.outcome == 'accepted') {
 
@@ -273,10 +308,6 @@ async function askInstall() {
         }
     }
 }
-
-
-
-
 
 async function connectUser() {
 
@@ -302,7 +333,6 @@ async function connectUser() {
   if(content.status_code == 200) {
       await storage.saveUserId(content.data.user_id);
       await haveAnAccount();
-
   }
 }
 
@@ -310,15 +340,16 @@ async function connectUser() {
 
 async function haveAnAccount() {
 
+
     await verifyIsInstalled();
-    await verifyNotification();
+             verifyNotification();
+          verifyOsNavigator();
 
     const payload = {
         userId: await storage.getUserId(),
         code: getParams()
     }
 
-  console.log(payload);
     const response = await fetch(runtime.public.api + '/workflow', {
         method: 'POST',
         headers: {
@@ -349,11 +380,11 @@ async function haveAnAccount() {
 
     if (content.status_code == 200) {
 
-
         statusMessage.value = {
             message: '',
             status: ''
         }
+
 
         if (content.data.message == "WELCOME_MAIL_SEND") {
             statusMessage.value = {
@@ -371,7 +402,25 @@ async function haveAnAccount() {
             return;
         }
 
+        if(content.data.message == 'NEED_NOTIFICATION' && !checkStandalone) {
+            statusMessage.value = {
+              status: "OPEN_THE_APP_CONTINUE",
+              message: "open in the app to continue"
+            }
+            return;
+
+
+
+        }
+
         if (content.data.message == 'NEED_NOTIFICATION' && checkStandalone) {
+          if(data.value.agent.navigator == 'safari' && data.value.agent.os == 'ios' && Notification.permission === "denied") {
+            statusMessage.value = {
+              status: "ENABLE_IOS_NOTIFICATION",
+              message: ""
+              }
+            return;
+            }
             statusMessage.value = {
                 message: 'enable notification for full support of the app',
                 status: 'NOTIFICATION'
@@ -388,6 +437,7 @@ async function haveAnAccount() {
         }
 
         if (content.data.message == "INSTALLED") {
+
             statusMessage.value = {
                 message: 'You will receive soon the first notification from your content creator, stay tuned',
                 status: 'INSTALLED'
@@ -436,6 +486,9 @@ async function loadManifest() {
 
 async function fetchInfoNotification() {
 
+
+    const haveAnUser = await storage.getUserId();
+
     const response = await fetch(runtime.public.api + '/info?id=' + getParams(), {
         method: 'GET',
         headers: {
@@ -449,19 +502,24 @@ async function fetchInfoNotification() {
     }
 
 
+  console.log(haveAnUser);
+
+    if(haveAnUser) {
+      await haveAnAccount();
+    }
+
+
 }
 
 async function askNotification() {
 
-
     if(!$pwa) return;
 
     if(!$pwa.isPWAInstalled) {
-        askInstall();
-
+       await  askInstall();
     }
 
-    const notification = Notification.requestPermission(async (request) => {
+    await Notification.requestPermission(async (request) => {
 
       if(request == "granted") {
 
@@ -488,26 +546,38 @@ async function askNotification() {
           message: 'You will receive soon the first notification from your content creator, stay tuned',
           status: 'INSTALLED'
         }
+      } else {
+
+
+        notificationDisabled.value = true;
+        if(data.value.agent.navigator == 'safari') {
+          statusMessage.value = {
+              message: "",
+              status: "ENABLE_IOS_NOTIFICATION"
+          }
+
+
+        }
+
       }
-
-
-
     })
-
-
-    //
-
-
-
-
-
 }
 
 onMounted(async () => {
     await registerServiceWorker();
-    if(!verifyOsNavigator()) return;
     await fetchInfoNotification();
+    if(!verifyOsNavigator()) return;
     statusMessage.value.status = 'INIT';
+
+    const getUser = await storage.getUserId();
+
+    if(getUser) {
+      await haveAnAccount();
+    }
+
+    await checkPWAInstalled();
+
+
 })
 
 </script>
