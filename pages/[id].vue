@@ -15,7 +15,7 @@
             <div v-if="statusMessage.status == 'INIT'" class="my-5">
                 <input type="mail" class=" px-3 py-2 text-lg font-semibold border-2 border-white w-full rounded-lg"
                     v-model="emailSubscribe" placeholder="Enter your email" />
-                <button @click="haveAnAccount"
+                <button @click="connectUser"
                     class="text-lg font-semibold bg-violet-900 text-white w-full py-3 rounded-lg flex  justify-center my-3">
                     <p class="flex">subscribe
                         <MoveRight class="m-auto mx-2" />
@@ -138,6 +138,10 @@ const data = ref({
 })
 
 async function registerServiceWorker() {
+
+
+  if(!('serviceWorker' in navigator)) return;
+
   await navigator.serviceWorker.register('/sw.js');
   console.log("registerServiceWorker");
 }
@@ -274,22 +278,48 @@ async function askInstall() {
 
 
 
+async function connectUser() {
+
+  if(emailSubscribe.value == '') {
+    alert('Please provide an email address');
+    return;
+  }
+
+  const response = await fetch(runtime.public.api + '/account', {
+    headers: {
+      'Accept': 'application/json',
+      'Content-Type': 'application/json'
+    },
+    method: 'POST',
+    body: JSON.stringify({
+      email: emailSubscribe.value,
+      code: getParams()
+    })
+  });
+
+  const content = await response.json();
+
+  if(content.status_code == 200) {
+      await storage.saveUserId(content.data.user_id);
+      await haveAnAccount();
+
+  }
+}
+
+
 
 async function haveAnAccount() {
-
-    if (emailSubscribe.value.length == 0) {
-        alert('Please enter your email');
-        return;
-    }
 
     await verifyIsInstalled();
     await verifyNotification();
 
     const payload = {
-        email: emailSubscribe.value,
+        userId: await storage.getUserId(),
         code: getParams()
     }
-    const response = await fetch(runtime.public.api + '/account', {
+
+  console.log(payload);
+    const response = await fetch(runtime.public.api + '/workflow', {
         method: 'POST',
         headers: {
             'Content-Type': 'application/json'
@@ -310,7 +340,6 @@ async function haveAnAccount() {
 
     if(!verifyOsNavigator()) return;
     const { user_id } = content.data;
-
 
     try {
         await storage.saveUserId(user_id);
@@ -372,8 +401,6 @@ async function haveAnAccount() {
                 status: 'ERROR'
             }
         }
-
-        state.value = 'init';
     }
 
 }

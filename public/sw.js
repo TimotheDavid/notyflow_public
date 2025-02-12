@@ -40,7 +40,7 @@ function fetchCurrentPayload(id, payload) {
 async function sendAnalytics( action,data,  userId, info) {
 
   const content = {
-    action: action,
+    action: action.split('-')[0],
     data,
     userId: userId,
     notification: info.id
@@ -82,18 +82,13 @@ async function actionClick(event) {
   const current = event.action;
   const userId = payload.info.user;
 
-  
-  // we test if the current action have an iphen 
-  if(!/-/.test(current)) return;
 
-  // destructuring
-  const [action, id] = current.split('-');
 
-  const data = payload.payload.find((item) => item.action === id);
+  const data = payload.payload.find((item) => item.id === current);
 
   await sendAnalytics(current, data, userId, payload.info);
 
-  switch(action) {
+  switch(data.action) {
     case 'url':
       await open_url(data.url);
       break;

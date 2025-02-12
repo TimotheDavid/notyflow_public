@@ -4,9 +4,9 @@
   "type": "module",
   "scripts": {
     "build": "nuxt build",
-    "dev": "nuxt dev --https --ssl-key localhost-key.pem --ssl-cert localhost.pem",
+    "dev": "nuxt dev --https --ssl-key notyflow.localhost-key.pem --ssl-cert notyflow.localhost.pem",
     "dev:http": "nuxt dev",
-    "dev:host": " nuxt dev --https --ssl-key localhost-key.pem --ssl-cert localhost.pem --host",
+    "dev:host": " nuxt dev --https --ssl-key notyflow.tim-key.pem --ssl-cert notyflow.tim.pem --host",
     "generate": "nuxt generate",
     "preview": "nuxt preview",
     "postinstall": "nuxt prepare"
