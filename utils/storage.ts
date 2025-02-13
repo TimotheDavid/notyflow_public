@@ -24,7 +24,11 @@ export const storage = {
       return db;
   },
 
-  async saveUserId(userId: string) {    
+  async saveUserId(userId: string) {
+
+
+    if(userId == "undefined") return;
+
     localStorage.setItem(USER_ID_KEY, userId);
     
     const db = await this.initDB();
