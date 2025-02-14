@@ -37,12 +37,23 @@ export const storage = {
       user_id: userId
     }
 
-    console.log(db);
-    
+
 
     const current = await this.getUserId();
     !current ? db.user.add(record) : db.user.put({ id: 1, user_id: userId});
     
+  },
+
+  async removeUser() {
+
+    const currentUer = localStorage.getItem(USER_ID_KEY);
+
+    const db = await this.initDB();
+    if (currentUer) {
+      localStorage.removeItem(USER_ID_KEY);
+      const currentDb = await db.user.delete(1);
+    }
+
   },
 
   async getUserId() {

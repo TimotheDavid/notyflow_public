@@ -1,5 +1,10 @@
 <template>
     <div v-if="data" class="  flex h-screen w-screen flex-col " :style="getBackground">
+      <div class="my-5 flex justify-end mx-5">
+        <button class="bg-red-600 text-white p-2 rounded-lg " @click="deleteData" ><Trash :size="32"/></button>
+      </div>
+
+
 
         <div class="w-9/12 mx-auto pt-10">
             <div class="mx-auto">
@@ -10,6 +15,7 @@
                 <img v-for="item in data.socials" :src="`/${item.name}.svg`" class="h-8 "
                     @click="navigateTo(item.url, { external: true })" />
             </div>
+
             <div v-if="statusMessage.status == 'INIT'" class="my-5">
                 <input type="mail" class=" px-3 py-2 text-lg font-semibold border-2 border-white w-full rounded-lg"
                     v-model="emailSubscribe" placeholder="Enter your email" />
@@ -88,7 +94,7 @@
     </div>
 </template>
 <script lang="ts" setup>
-import { MoveRight } from 'lucide-vue-next';
+import { MoveRight, Trash } from 'lucide-vue-next';
 import { storage } from '~/utils/storage';
 
 const route = useRoute();
@@ -232,6 +238,13 @@ function getParams() {
     if (params) {
         return params as string;
     }
+}
+
+
+async function deleteData() {
+    await storage.removeUser();
+    userId.value = null;
+    statusMessage.value.status = 'INIT';
 }
 
 
@@ -493,6 +506,8 @@ async function fetchInfoNotification() {
       data.value = content.data;
     }
 
+  statusMessage.value.status = "INIT";
+
     if(currentUser && currentUser != "undefined") {
       userId.value = currentUser;
       await haveAnAccount();
@@ -500,7 +515,7 @@ async function fetchInfoNotification() {
     }
 
 
-  statusMessage.value.status = "INIT";
+
 
 }
 
@@ -570,6 +585,7 @@ onMounted(async () => {
     await checkPWAInstalled();
     await fetchInfoNotification();
     await loadManifest();
+
 })
 
 </script>
