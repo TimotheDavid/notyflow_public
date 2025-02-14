@@ -48,6 +48,8 @@ export const storage = {
 
     const currentUer = localStorage.getItem(USER_ID_KEY);
 
+    console.log(currentUer);
+
     const db = await this.initDB();
     if (currentUer) {
       localStorage.removeItem(USER_ID_KEY);
