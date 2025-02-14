@@ -1,5 +1,5 @@
 <template>
-    <div v-if="data" class="  flex h-screen w-screen flex-col " :style="getBackground">
+    <div v-if="data" class="  flex h-full w-screen flex-col " :style="getBackground">
       <div class="my-5 flex justify-end mx-5">
         <button class="bg-red-600 text-white p-2 rounded-lg " @click="deleteData" ><Trash :size="32"/></button>
       </div>
@@ -18,6 +18,11 @@
         <div>
           <wizard/>
         </div>
+
+        <div>
+          <notification-center></notification-center>
+
+        </div>
       </div>
     </div>
 </template>
@@ -26,6 +31,7 @@ import {Trash} from 'lucide-vue-next';
 
 const runtime = useRuntimeConfig();
 const route = useRoute();
+const userStore = getUserStore();
 
 const getBackground = computed(() => {
   return {
@@ -35,11 +41,12 @@ const getBackground = computed(() => {
 
 
 function getParams() {
-
   return route.params.id;
+}
 
-
-
+type SocialInfo = {
+  name: string,
+  url: string
 }
 
 const data = ref({
@@ -75,8 +82,17 @@ async function fetchInfoNotification() {
   const content = await response.json();
 
   if (content.data) {
+    userStore.code = getParams() as string;
     data.value = content.data;
   }
+}
+
+async function deleteData() {
+    await storage.removeUser();
+    userStore.$reset();
+
+
+
 
 
 }
