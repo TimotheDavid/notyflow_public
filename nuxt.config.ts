@@ -4,7 +4,7 @@ import * as fs from 'fs';
 export default defineNuxtConfig({
   compatibilityDate: "2024-11-01",
   devtools: { enabled: true },
-  modules: ["@nuxtjs/tailwindcss", "@vite-pwa/nuxt"],
+  modules: ["@nuxtjs/tailwindcss", "@vite-pwa/nuxt", "@pinia/nuxt", "@nuxt/image"],
   pwa: {
 
     devOptions: {

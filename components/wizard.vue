@@ -14,7 +14,6 @@
         <p class="bg-red-500 text-white font-semibold p-2 rounded-lg ">please use an email of forms of contact@notyflow.com</p>
       </div>
     </div>
-
   </div>
   <div v-if="statusMessage.status == 'NOT_VERIFIED'" class="my-5">
     <div>
@@ -86,6 +85,7 @@ import { storage } from '~/utils/storage';
 const route = useRoute();
 const {$pwa} = useNuxtApp();
 const runtime = useRuntimeConfig();
+const userStore = getUserStore();
 
 const checkStandalone = computed(() => {
   return window.matchMedia('(display-mode: standalone)').matches;
@@ -97,6 +97,14 @@ const emailSubscribe = ref({
   email: '',
   error: false
 });
+
+
+userStore.$subscribe(() => {
+  const user = userStore.getUser;
+  statusMessage.value.status = user.status;
+
+})
+
 const statusMessage = ref({
   message: '',
   status: ''
@@ -161,7 +169,6 @@ async function checkPWAInstalled() {
       })
     });
   }
-
 }
 
 
@@ -306,7 +313,6 @@ async function askInstall() {
 
 async function connectUser() {
 
-
   if(emailSubscribe.value.email == '') {
     alert('Please provide an email address');
     return;
@@ -334,6 +340,12 @@ async function connectUser() {
   const content = await response.json();
 
   if(content.data.user_id) {
+
+    userStore.$state = {
+      userId: content.data.user_id,
+      code: getParams() as string
+    }
+
     await storage.saveUserId(content.data.user_id);
     userId.value = content.data.user_id;
     await haveAnAccount();
@@ -505,7 +517,17 @@ async function fetchInfoNotification() {
   statusMessage.value.status = "INIT";
 
   if(currentUser && currentUser != "undefined") {
+
+    userStore.$state = {
+      userId:  currentUser as string,
+      code: getParams() as string,
+    }
+
     userId.value = currentUser;
+
+
+
+
     await haveAnAccount();
     return;
   }
