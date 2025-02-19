@@ -27,11 +27,6 @@ export default defineNuxtConfig({
       ]
     }
   },
-  vite: {
-    server: {
-      allowedHosts: ['.letschoose.fr', '7be7-90-126-116-108.ngrok-free.app']
-    }
-  },
   ssr: false,
   runtimeConfig: {
     public: {
