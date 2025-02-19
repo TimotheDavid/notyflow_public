@@ -16,6 +16,7 @@
     </div>
   </div>
 
+
   <div v-if="statusMessage.status == 'NOT_VERIFIED'" class="my-5">
     <div>
       <p class="text-lg font-semibold text-white bg-violet-900/5 p-2 rounded-lg ">
