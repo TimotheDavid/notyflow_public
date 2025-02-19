@@ -19,6 +19,11 @@ export default defineNuxtConfig({
     },
 
   },
+  vite: {
+    server: {
+      allowedHosts: ['.letschoose.fr']
+    }
+  },
   app: {
     head: {
       link: [
