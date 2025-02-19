@@ -1,5 +1,7 @@
 <template>
       <div class="h-screen ">
+
+        {{ data }}
         <div class="h-2/3 overflow-y-auto py-3">
         <div v-for="item in data" :key="item.id" class="my-5 mx-2" @click="openToPost(item)">
           <div class="bg-white py-2 px-2 rounded-lg min-h-14">
@@ -18,7 +20,6 @@
       </div>
 </template>
 <script lang="ts" setup>
-import {notifications} from "~/data/notifications";
 const runtime = useRuntimeConfig();
 const routes = useRoute();
 const store = getUserStore();
@@ -47,12 +48,12 @@ async function getNotifications() {
       'Accept': 'application/json'
     },
     body: JSON.stringify({
-      code:  currentUser.code,
-      userId: currentUser.userId
+      code:  currentUser.code
     })
   });
 
-    data.value = notifications;
+    const content = await response.json();
+    data.value = content.data;
 
 }
 

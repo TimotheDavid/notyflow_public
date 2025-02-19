@@ -115,7 +115,6 @@ type SocialInfo = {
   url: string
 }
 
-const userId = ref<string|null>();
 
 const agent = ref({
   os: '',
@@ -153,20 +152,16 @@ async function checkPWAInstalled() {
 
   const isInstalled = window.matchMedia('(display-mode: standalone)').matches;
 
-  if(!userId.value) return;
 
   if(isInstalled) {
 
     const response = await fetch(runtime.public.api + '/install', {
       method: 'POST',
+      credentials: 'include',
       headers: {
         'Content-Type': 'application/json',
         'Accept': 'application/json',
       },
-      body: JSON.stringify({
-        code: getParams(),
-        userId: userId.value,
-      })
     });
   }
 }
@@ -237,33 +232,23 @@ function getParams() {
 }
 
 
-async function deleteData() {
-  await storage.removeUser();
-  userId.value = null;
-  statusMessage.value.status = 'INIT';
-}
+
 
 
 async function verifyIsInstalled() {
 
   if(!$pwa) return;
 
-  if(!userId.value) return;
-
   if(!$pwa.isPWAInstalled) return;
 
-  const payload = {
-    userId: userId.value,
-    code: getParams()
-  }
 
   const response = await fetch(runtime.public.api + '/install', {
     method: 'POST',
+    credentials: 'include',
     headers: {
       'Accept': 'application/json',
       'Content-Type': 'application/json'
     },
-    body: JSON.stringify(payload)
   });
 }
 
@@ -285,23 +270,17 @@ async function askInstall() {
 
   if(!$pwa) return;
 
-  if(!userId.value) return;
 
   if ('serviceWorker' in navigator) {
     const installed = await $pwa.install();
 
-    const payload = {
-      userId: userId.value,
-      code: getParams()
-    }
-
     if(installed && installed.outcome == 'accepted') {
       const response = await fetch(runtime.public.api + '/install', {
         method: 'POST',
+        credentials: 'include',
         headers: {
           'Content-Type': 'application/json'
         },
-        body: JSON.stringify(payload),
       });
       const content = await response.json();
       if (content.status_code == 200) {
@@ -325,57 +304,37 @@ async function connectUser() {
 
 
 
+
   const response = await fetch(runtime.public.api + '/account', {
     headers: {
       'Accept': 'application/json',
       'Content-Type': 'application/json'
     },
     method: 'POST',
+    credentials: 'include',
     body: JSON.stringify({
       email: emailSubscribe.value.email,
-      code: getParams()
     })
   });
 
   const content = await response.json();
-
-  if(content.data.user_id) {
-
-    userStore.$state = {
-      userId: content.data.user_id,
-      code: getParams() as string
-    }
-
-    await storage.saveUserId(content.data.user_id);
-    userId.value = content.data.user_id;
     await haveAnAccount();
-  }
 }
 
 
 
 async function haveAnAccount() {
-  if(!userId.value) {
-    statusMessage.value.status = 'INIT';
-  }
-
-  const payload = {
-    userId: userId.value,
-    code: getParams()
-  }
 
   const response = await fetch(runtime.public.api + '/workflow', {
     method: 'POST',
+    credentials: 'include',
     headers: {
       'Content-Type': 'application/json',
       'Accept': 'application/json',
     },
-    body: JSON.stringify(payload),
   })
 
   const content = await response.json();
-
-
 
   if(data.value.agent.os == 'laptop') {
     statusMessage.value = {
@@ -393,9 +352,6 @@ async function haveAnAccount() {
       message: '',
       status: ''
     }
-
-
-
 
     if (content.data.message == "WELCOME_MAIL_SEND") {
       statusMessage.value = {
@@ -466,19 +422,12 @@ async function haveAnAccount() {
 
 async function loadManifest() {
 
-  if(!userId.value) {
-    statusMessage.value.status = 'INIT';
-    return;
-  }
-
-  const user = userId.value;
-
   const response = await fetch(runtime.public.api + '/manifest/', {
     method: 'POST',
+    credentials: 'include',
     headers: {
       'Content-Type': 'application/json'
     },
-    body: JSON.stringify({ code: getParams(), userId: user  }),
   });
 
   const content = await response.json();
@@ -502,35 +451,21 @@ async function fetchInfoNotification() {
 
   const response = await fetch(runtime.public.api + '/info?id=' + getParams(), {
     method: 'GET',
+    credentials: 'include',
     headers: {
       'Content-Type': 'application/json'
     },
   });
   const content = await response.json();
 
-  const currentUser =  await storage.getUserId();
 
   if (content.data) {
     data.value = content.data;
   }
 
   statusMessage.value.status = "INIT";
+  await haveAnAccount();
 
-  if(currentUser && currentUser != "undefined") {
-
-    userStore.$state = {
-      userId:  currentUser as string,
-      code: getParams() as string,
-    }
-
-    userId.value = currentUser;
-
-
-
-
-    await haveAnAccount();
-    return;
-  }
 }
 
 
@@ -545,10 +480,6 @@ async function askNotification() {
     await  askInstall();
   }
 
-  if(!userId) {
-    statusMessage.value.status = 'INIT';
-    return;
-  }
 
   await Notification.requestPermission(async (request) => {
 
@@ -566,11 +497,10 @@ async function askNotification() {
 
       await fetch(runtime.public.api + '/notification', {
         method: 'POST',
-
+        credentials: 'include',
         headers: {
           'Content-Type': 'application/json'
         },
-        body: JSON.stringify({ subscription, code: getParams(), userId: userId.value }),
       });
 
       statusMessage.value = {
@@ -598,6 +528,7 @@ onMounted(async () => {
   await registerServiceWorker();
   await checkPWAInstalled();
   await fetchInfoNotification();
+  await haveAnAccount();
   await loadManifest();
 
 })

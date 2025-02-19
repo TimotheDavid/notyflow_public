@@ -1,4 +1,4 @@
-FROM node:22.4-bookworm
+FROM node:23-alpine
 
 RUN mkdir -p /app
 

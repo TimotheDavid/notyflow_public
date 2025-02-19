@@ -1,11 +1,11 @@
 <template>
-    <div v-if="data" class="  flex h-full w-screen flex-col " :style="getBackground">
+    <div v-if="data" class="  flex h-screen w-screen flex-col " :style="getBackground">
       <div class="my-5 flex justify-end mx-5">
         <button class="bg-red-600 text-white p-2 rounded-lg " @click="deleteData" ><Trash :size="32"/></button>
       </div>
       <div class="w-10/12 mx-auto">
 
-        <div class="w-9/12 mx-auto pt-10">
+        <div class="w-9/12 mx-auto pt-5">
             <div class="mx-auto">
                 <!-- <img :src="data.logo" class=" h-20 m-auto my-2 rounded-full" alt="logo" /> -->
                 <h1 class="font-semibold text-center text-3xl uppercase text-white">{{ data.name }} </h1>
@@ -20,8 +20,6 @@
         </div>
 
         <div>
-          <notification-center></notification-center>
-
         </div>
       </div>
     </div>
@@ -68,6 +66,21 @@ const data = ref({
   }
 })
 
+
+/**
+ * fetch a new token for the user
+ */
+async function fetchTokens() {
+
+  const response = await fetch(runtime.public.api + "/tokens?code=" + getParams(), {
+    method: 'GET',
+    credentials: 'include'
+  })
+
+  console.log(await response.text());
+}
+
+
 /**
  * fetch the basic info for the notification of the user
  */
@@ -75,6 +88,7 @@ async function fetchInfoNotification() {
 
   const response = await fetch(runtime.public.api + '/info?id=' + getParams(), {
     method: 'GET',
+    credentials: 'include',
     headers: {
       'Content-Type': 'application/json'
     },
@@ -98,7 +112,10 @@ async function deleteData() {
 }
 
 onMounted(async () => {
+  await fetchTokens();
   await fetchInfoNotification();
+
+
 })
 
 </script>
