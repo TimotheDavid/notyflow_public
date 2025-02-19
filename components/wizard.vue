@@ -155,7 +155,7 @@ async function checkPWAInstalled() {
 
   if(isInstalled) {
 
-    const response = await fetch(runtime.public.api + '/install', {
+    const response = await fetch(runtime.public.api + '/public/install', {
       method: 'POST',
       credentials: 'include',
       headers: {
@@ -242,7 +242,7 @@ async function verifyIsInstalled() {
   if(!$pwa.isPWAInstalled) return;
 
 
-  const response = await fetch(runtime.public.api + '/install', {
+  const response = await fetch(runtime.public.api + '/public/install', {
     method: 'POST',
     credentials: 'include',
     headers: {
@@ -275,7 +275,7 @@ async function askInstall() {
     const installed = await $pwa.install();
 
     if(installed && installed.outcome == 'accepted') {
-      const response = await fetch(runtime.public.api + '/install', {
+      const response = await fetch(runtime.public.api + '/public/install', {
         method: 'POST',
         credentials: 'include',
         headers: {
@@ -305,7 +305,7 @@ async function connectUser() {
 
 
 
-  const response = await fetch(runtime.public.api + '/account', {
+  const response = await fetch(runtime.public.api + '/public/account', {
     headers: {
       'Accept': 'application/json',
       'Content-Type': 'application/json'
@@ -325,7 +325,7 @@ async function connectUser() {
 
 async function haveAnAccount() {
 
-  const response = await fetch(runtime.public.api + '/workflow', {
+  const response = await fetch(runtime.public.api + '/public/workflow', {
     method: 'POST',
     credentials: 'include',
     headers: {
@@ -422,7 +422,7 @@ async function haveAnAccount() {
 
 async function loadManifest() {
 
-  const response = await fetch(runtime.public.api + '/manifest/', {
+  const response = await fetch(runtime.public.api + '/public/manifest/', {
     method: 'POST',
     credentials: 'include',
     headers: {
@@ -449,7 +449,7 @@ async function loadManifest() {
  */
 async function fetchInfoNotification() {
 
-  const response = await fetch(runtime.public.api + '/info?id=' + getParams(), {
+  const response = await fetch(runtime.public.api + '/public/info?id=' + getParams(), {
     method: 'GET',
     credentials: 'include',
     headers: {
@@ -495,7 +495,7 @@ async function askNotification() {
       }
       const subscription = await registration.pushManager.subscribe(payload);
 
-      await fetch(runtime.public.api + '/notification', {
+      await fetch(runtime.public.api + '/public/notification', {
         method: 'POST',
         credentials: 'include',
         headers: {

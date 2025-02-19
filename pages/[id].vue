@@ -72,7 +72,7 @@ const data = ref({
  */
 async function fetchTokens() {
 
-  const response = await fetch(runtime.public.api + "/tokens?code=" + getParams(), {
+  const response = await fetch(runtime.public.api + "/public/tokens?code=" + getParams(), {
     method: 'GET',
     credentials: 'include'
   })
@@ -86,7 +86,7 @@ async function fetchTokens() {
  */
 async function fetchInfoNotification() {
 
-  const response = await fetch(runtime.public.api + '/info?id=' + getParams(), {
+  const response = await fetch(runtime.public.api + '/public/info?id=' + getParams(), {
     method: 'GET',
     credentials: 'include',
     headers: {
