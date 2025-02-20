@@ -96,7 +96,7 @@ async function fetchInfoNotification() {
   const content = await response.json();
 
   if(content.data.message == "CHANNEL_NOT_FOUND") {
-    window.location.href = window.location.hostname;
+    navigateTo(window.location.hostname, {external: true});
 
 
   }
