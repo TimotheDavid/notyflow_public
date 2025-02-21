@@ -37,6 +37,7 @@ async function getNotifications() {
 
   const currentUser = store.getUser;
 
+
   const response = await fetch(runtime.public.api + '/public/notifications', {
     method: 'POST',
     headers: {
