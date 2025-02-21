@@ -1,7 +1,5 @@
 <template>
       <div class="h-screen ">
-
-        {{ data }}
         <div class="h-2/3 overflow-y-auto py-3">
         <div v-for="item in data" :key="item.id" class="my-5 mx-2" @click="openToPost(item)">
           <div class="bg-white py-2 px-2 rounded-lg min-h-14">
@@ -30,8 +28,6 @@ const data = ref([] as any);
 store.$subscribe(async () => {
 
   const user = store.getUser;
-
-  console.log(user.userId, user.code);
   await getNotifications();
 
 
@@ -41,7 +37,7 @@ async function getNotifications() {
 
   const currentUser = store.getUser;
 
-  const response = await fetch(runtime.public.api + '/notifications', {
+  const response = await fetch(runtime.public.api + '/public/notifications', {
     method: 'POST',
     headers: {
       'Content-Type': 'application/json',
