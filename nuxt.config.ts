@@ -3,7 +3,13 @@ import * as fs from 'fs';
 // https://nuxt.com/docs/api/configuration/nuxt-config
 export default defineNuxtConfig({
   compatibilityDate: "2024-11-01",
-  devtools: { enabled: true },
+  devtools: {
+    enabled: true,
+
+    timeline: {
+      enabled: true,
+    },
+  },
   modules: ["@nuxtjs/tailwindcss", "@vite-pwa/nuxt", "@pinia/nuxt", "@nuxt/image"],
   pwa: {
 
@@ -29,13 +35,13 @@ export default defineNuxtConfig({
   },
   vite: {
     server: {
-      allowedHosts: ['.letschoose.fr', '7be7-90-126-116-108.ngrok-free.app']
+      allowedHosts: ['.letschoose.fr']
     }
   },
   ssr: false,
   runtimeConfig: {
     public: {
-      api: process.env.NUXT_APP_API,
+      api: process.env.NUXT_PUBLIC_API,
       hostname: process.env.NUXT_API_HOSTNAME
     },
   },

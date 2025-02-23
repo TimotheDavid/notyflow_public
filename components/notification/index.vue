@@ -3,8 +3,6 @@
     <notification-center></notification-center>
     <notification-center></notification-center>
 
-
-
   </div>
 </template>
 <script setup lang="ts">

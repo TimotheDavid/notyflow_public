@@ -1,13 +1,4 @@
 <template>
-      <div class="h-screen ">
-
-        {{ data }}
-        <div class="h-2/3 overflow-y-auto py-3">
-        <div v-for="item in data" :key="item.id" class="my-5 mx-2" @click="openToPost(item)">
-          <div class="bg-white py-2 px-2 rounded-lg min-h-14">
-          <div class="text-violet-950 font-semibold  flex  justify-between">
-            <h1 class="text-violet-950 font-semibold ">{{ item.title}}</h1>
-            <h1>{{ new Date(item.send_at).toLocaleDateString() }}</h1>
   <div class="p-3">
     <h1 class="text-white text-xl underline font-semibold ">current content</h1>
     <div class="w-full overflow-y-auto gap-3 flex justify-between p-3 ">
@@ -58,13 +49,7 @@ async function getNotifications() {
 }
 
 function openToPost(item: any) {
-
   navigateTo(item.post, {external: true});
-
-
-
 }
-
-
 
 </script>
