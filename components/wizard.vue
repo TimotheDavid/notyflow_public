@@ -15,6 +15,8 @@
       </div>
     </div>
   </div>
+
+
   <div v-if="statusMessage.status == 'NOT_VERIFIED'" class="my-5">
     <div>
       <p class="text-lg font-semibold text-white bg-violet-900/5 p-2 rounded-lg ">
@@ -155,7 +157,7 @@ async function checkPWAInstalled() {
 
   if(isInstalled) {
 
-    const response = await fetch(runtime.public.api + '/install', {
+    const response = await fetch(runtime.public.api + '/public/install', {
       method: 'POST',
       credentials: 'include',
       headers: {
@@ -242,7 +244,7 @@ async function verifyIsInstalled() {
   if(!$pwa.isPWAInstalled) return;
 
 
-  const response = await fetch(runtime.public.api + '/install', {
+  const response = await fetch(runtime.public.api + '/public/install', {
     method: 'POST',
     credentials: 'include',
     headers: {
@@ -270,22 +272,21 @@ async function askInstall() {
 
   if(!$pwa) return;
 
-
   if ('serviceWorker' in navigator) {
     const installed = await $pwa.install();
 
     if(installed && installed.outcome == 'accepted') {
-      const response = await fetch(runtime.public.api + '/install', {
-        method: 'POST',
+      const response = await fetch(runtime.public.api + '/public/install', {
+        method: 'GET',
         credentials: 'include',
         headers: {
           'Content-Type': 'application/json'
         },
       });
+
       const content = await response.json();
-      if (content.status_code == 200) {
+
         await haveAnAccount();
-      }
     }
   }
 }
@@ -297,15 +298,8 @@ async function connectUser() {
     return;
   }
 
-  if(emailSubscribe.value.email.indexOf('@') == -1) {
-    emailSubscribe.value.error = true;
-    return;
-  }
 
-
-
-
-  const response = await fetch(runtime.public.api + '/account', {
+  const response = await fetch(runtime.public.api + '/public/account', {
     headers: {
       'Accept': 'application/json',
       'Content-Type': 'application/json'
@@ -317,15 +311,17 @@ async function connectUser() {
     })
   });
 
-  const content = await response.json();
-    await haveAnAccount();
+  const response_content  = await response.json();
+  await haveAnAccount();
 }
 
 
 
 async function haveAnAccount() {
 
-  const response = await fetch(runtime.public.api + '/workflow', {
+
+
+  const response = await fetch(runtime.public.api + '/public/workflow', {
     method: 'POST',
     credentials: 'include',
     headers: {
@@ -335,6 +331,8 @@ async function haveAnAccount() {
   })
 
   const content = await response.json();
+
+
 
   if(data.value.agent.os == 'laptop') {
     statusMessage.value = {
@@ -422,7 +420,7 @@ async function haveAnAccount() {
 
 async function loadManifest() {
 
-  const response = await fetch(runtime.public.api + '/manifest/', {
+  const response = await fetch(runtime.public.api + '/public/manifest/', {
     method: 'POST',
     credentials: 'include',
     headers: {
@@ -449,7 +447,7 @@ async function loadManifest() {
  */
 async function fetchInfoNotification() {
 
-  const response = await fetch(runtime.public.api + '/info?id=' + getParams(), {
+  const response = await fetch(runtime.public.api + '/public/info?id=' + getParams(), {
     method: 'GET',
     credentials: 'include',
     headers: {
@@ -495,9 +493,10 @@ async function askNotification() {
       }
       const subscription = await registration.pushManager.subscribe(payload);
 
-      await fetch(runtime.public.api + '/notification', {
+      await fetch(runtime.public.api + '/public/notification', {
         method: 'POST',
         credentials: 'include',
+        body: JSON.stringify({subscription}),
         headers: {
           'Content-Type': 'application/json'
         },
@@ -522,6 +521,9 @@ async function askNotification() {
 
     }
   })
+
+  await haveAnAccount();
+
 }
 
 onMounted(async () => {
