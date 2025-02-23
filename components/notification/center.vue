@@ -8,20 +8,22 @@
           <div class="text-violet-950 font-semibold  flex  justify-between">
             <h1 class="text-violet-950 font-semibold ">{{ item.title}}</h1>
             <h1>{{ new Date(item.send_at).toLocaleDateString() }}</h1>
+  <div class="p-3">
+    <h1 class="text-white text-xl underline font-semibold ">current content</h1>
+    <div class="w-full overflow-y-auto gap-3 flex justify-between p-3 ">
+      <div v-for="item in data" :key="item.id">
+        <div class="bg-fuchsia-700 min-w-52 h-40 rounded-lg flex flex-col-reverse">
+          <div class="w-full bg-white h-1/3 rounded-b-lg relative shadow-2xl  ">
+            <p class="px-2 font-semibold text-gray-500 text-sm">{{ item.message }}</p>
           </div>
-            <div>
-              <p class="text-black font-normal font-sans py-2">{{ item.message }}</p>
-            </div>
-            <div class="bg-violet-950 w-full h-40 rounded-lg">
-            </div>
-          </div>
-          </div>
+          <p class="text-end px-2 font-semibold text-white">{{ new Date(item.send_at).toLocaleDateString() }}</p>
         </div>
       </div>
+    </div>
+  </div>
 </template>
 <script lang="ts" setup>
 const runtime = useRuntimeConfig();
-const routes = useRoute();
 const store = getUserStore();
 
 
@@ -30,8 +32,6 @@ const data = ref([] as any);
 store.$subscribe(async () => {
 
   const user = store.getUser;
-
-  console.log(user.userId, user.code);
   await getNotifications();
 
 
@@ -41,7 +41,8 @@ async function getNotifications() {
 
   const currentUser = store.getUser;
 
-  const response = await fetch(runtime.public.api + '/notifications', {
+
+  const response = await fetch(runtime.public.api + '/public/notifications', {
     method: 'POST',
     headers: {
       'Content-Type': 'application/json',
@@ -51,7 +52,6 @@ async function getNotifications() {
       code:  currentUser.code
     })
   });
-
     const content = await response.json();
     data.value = content.data;
 
